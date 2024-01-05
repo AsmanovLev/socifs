@@ -13,6 +13,7 @@ import (
 	//"github.com/gotd/td/bin"
 
 	"github.com/gotd/td/bin"
+	"github.com/gotd/td/telegram/downloader"
 	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/telegram/message/styling"
 	"github.com/gotd/td/telegram/uploader"
@@ -46,7 +47,7 @@ func upload(client *gotgproto.Client, api *tg.Client, payload []byte, name strin
 	}
 }
 
-func search(client *gotgproto.Client, api *tg.Client, query string) {
+func search(client *gotgproto.Client, api *tg.Client, query string) tg.Document {
 	c := client.CreateContext()
 	res, err := api.MessagesSearch(c,
 		&tg.MessagesSearchRequest{
@@ -80,10 +81,26 @@ func search(client *gotgproto.Client, api *tg.Client, query string) {
 	media.Document.Encode(buf)
 	document.Decode(buf)
 
+	//fmt.Println(document.AccessHash, document.ID)
+
 	document.Attributes[0].Encode(buf)
 	attribute.Decode(buf)
 
 	fmt.Println(attribute.FileName)
+
+	return document
+}
+
+func download(client *gotgproto.Client, api *tg.Client, doc tg.Document) {
+	c := client.CreateContext()
+	d := downloader.NewDownloader()
+	loc := doc.AsInputDocumentFileLocation()
+
+	_, err := d.Download(api, loc).Stream(c, os.Stdout)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("\ndownload done")
 }
 
 type ConfigTelegram struct {
@@ -130,7 +147,8 @@ func main() {
 
 	//upload(client, api, []byte("Hello my file"))
 
-	search(client, api, "apk")
+	document := search(client, api, "journal")
+	download(client, api, document) //"journal")
 
 	//var me tg.User = Me()
 
