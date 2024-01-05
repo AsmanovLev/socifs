@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -11,8 +10,6 @@ import (
 
 	"github.com/celestix/gotgproto"
 	"github.com/celestix/gotgproto/sessionMaker"
-
-	//"github.com/gotd/td/bin"
 
 	"github.com/gotd/td/bin"
 	"github.com/gotd/td/telegram/downloader"
@@ -31,8 +28,8 @@ func tgUpload(tgc TelegramClient, payload []byte, name string) { // byte - paylo
 	sender := message.NewSender(tgc.api).WithUploader(u)
 	target := sender.To(&tg.InputPeerSelf{})
 
-	upload, err := u.FromBytes(c, "test.txt", payload)
-	log.Println("Uploading file")
+	upload, err := u.FromBytes(c, name, payload)
+
 	if err != nil {
 		panic(err)
 	}
@@ -41,7 +38,6 @@ func tgUpload(tgc TelegramClient, payload []byte, name string) { // byte - paylo
 
 	document.Filename(name).ForceFile(true)
 
-	log.Println("Sending file")
 	if _, err := target.Media(c, document); err != nil {
 		panic(err)
 	}
@@ -67,7 +63,6 @@ func tgSearch(tgc TelegramClient, query string) tg.Document {
 	message := tg.Message{}
 	media := tg.MessageMediaDocument{}
 	document := tg.Document{}
-	attribute := tg.DocumentAttributeFilename{}
 
 	res.Encode(buf)
 	slice.Decode(buf)
@@ -81,15 +76,17 @@ func tgSearch(tgc TelegramClient, query string) tg.Document {
 	media.Document.Encode(buf)
 	document.Decode(buf)
 
+	/* TODO: name check
+	attribute := tg.DocumentAttributeFilename{}
 	document.Attributes[0].Encode(buf)
 	attribute.Decode(buf)
-
 	fmt.Println(attribute.FileName)
+	*/
 
 	return document
 }
 
-func tgDownload(tgc TelegramClient, doc tg.Document) {
+func tgDownload(tgc TelegramClient, doc tg.Document) []byte {
 	c := tgc.client.CreateContext()
 	d := downloader.NewDownloader()
 	loc := doc.AsInputDocumentFileLocation()
@@ -99,7 +96,7 @@ func tgDownload(tgc TelegramClient, doc tg.Document) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(buf.Bytes(), "\ndownload done")
+	return buf.Bytes()
 }
 
 func tgInit(config ConfigTelegram) TelegramClient {
@@ -150,6 +147,7 @@ func main() {
 		panic(err)
 	}
 
+	log.Println("Connecting")
 	tgc := tgInit(config.Telegram)
 
 	log.Println("Uploading")
@@ -159,6 +157,7 @@ func main() {
 	document := tgSearch(tgc, "journal")
 
 	log.Println("Downloading")
-	tgDownload(tgc, document)
+	downloaded := tgDownload(tgc, document)
 
+	log.Println("Downloaded following string:", string(downloaded))
 }
