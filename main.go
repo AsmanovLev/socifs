@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -95,12 +97,13 @@ func download(client *gotgproto.Client, api *tg.Client, doc tg.Document) {
 	c := client.CreateContext()
 	d := downloader.NewDownloader()
 	loc := doc.AsInputDocumentFileLocation()
-
-	_, err := d.Download(api, loc).Stream(c, os.Stdout)
+	var buf bytes.Buffer
+	writer := io.Writer(&buf)
+	_, err := d.Download(api, loc).Stream(c, writer)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("\ndownload done")
+	fmt.Println(buf.Bytes(), "\ndownload done")
 }
 
 type ConfigTelegram struct {
