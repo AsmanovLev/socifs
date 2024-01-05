@@ -24,34 +24,32 @@ import (
 
 // generate key with dd if=/dev/random of=aes256.key bs=256 count=1
 
-func upload(client *gotgproto.Client, api *tg.Client, payload []byte, name string) { // byte - payload
+func tgUpload(tgc TelegramClient, payload []byte, name string) { // byte - payload
 
-	c := client.CreateContext()
-	u := uploader.NewUploader(api)
-	sender := message.NewSender(api).WithUploader(u)
+	c := tgc.client.CreateContext()
+	u := uploader.NewUploader(tgc.api)
+	sender := message.NewSender(tgc.api).WithUploader(u)
 	target := sender.To(&tg.InputPeerSelf{})
 
 	upload, err := u.FromBytes(c, "test.txt", payload)
 	log.Println("Uploading file")
 	if err != nil {
-		fmt.Errorf("upload %q: %w", "binary", err)
-		return
+		panic(err)
 	}
 
-	document := message.UploadedDocument(upload, styling.Plain(`Upload: From bot`))
+	document := message.UploadedDocument(upload, styling.Plain(``))
 
 	document.Filename(name).ForceFile(true)
 
 	log.Println("Sending file")
 	if _, err := target.Media(c, document); err != nil {
-		fmt.Errorf("send: %w", err)
-		return
+		panic(err)
 	}
 }
 
-func search(client *gotgproto.Client, api *tg.Client, query string) tg.Document {
-	c := client.CreateContext()
-	res, err := api.MessagesSearch(c,
+func tgSearch(tgc TelegramClient, query string) tg.Document {
+	c := tgc.client.CreateContext()
+	res, err := tgc.api.MessagesSearch(c,
 		&tg.MessagesSearchRequest{
 			Q:      query,
 			Peer:   &tg.InputPeerSelf{},
@@ -83,8 +81,6 @@ func search(client *gotgproto.Client, api *tg.Client, query string) tg.Document 
 	media.Document.Encode(buf)
 	document.Decode(buf)
 
-	//fmt.Println(document.AccessHash, document.ID)
-
 	document.Attributes[0].Encode(buf)
 	attribute.Decode(buf)
 
@@ -93,19 +89,44 @@ func search(client *gotgproto.Client, api *tg.Client, query string) tg.Document 
 	return document
 }
 
-func download(client *gotgproto.Client, api *tg.Client, doc tg.Document) {
-	c := client.CreateContext()
+func tgDownload(tgc TelegramClient, doc tg.Document) {
+	c := tgc.client.CreateContext()
 	d := downloader.NewDownloader()
 	loc := doc.AsInputDocumentFileLocation()
 	var buf bytes.Buffer
 	writer := io.Writer(&buf)
-	_, err := d.Download(api, loc).Stream(c, writer)
+	_, err := d.Download(tgc.api, loc).Stream(c, writer)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(buf.Bytes(), "\ndownload done")
 }
 
+func tgInit(config ConfigTelegram) TelegramClient {
+	var tgClient TelegramClient
+	var err error
+	tgClient.client, err = gotgproto.NewClient(
+		config.AppID,
+		config.AppHash,
+		gotgproto.ClientType{
+			Phone: config.Phone,
+		},
+		&gotgproto.ClientOpts{
+			Session: sessionMaker.SqliteSession(config.Session),
+		},
+	)
+
+	if err != nil {
+		log.Fatalln("failed to start client:", err)
+	}
+	tgClient.api = tgClient.client.API()
+	return tgClient
+}
+
+type TelegramClient struct {
+	client *gotgproto.Client
+	api    *tg.Client
+}
 type ConfigTelegram struct {
 	AppID   int    `yaml:"appid"`
 	AppHash string `yaml:"apphash"`
@@ -129,34 +150,15 @@ func main() {
 		panic(err)
 	}
 
-	client, err := gotgproto.NewClient(
-		config.Telegram.AppID,
-		config.Telegram.AppHash,
-		gotgproto.ClientType{
-			Phone: config.Telegram.Phone,
-		},
-		&gotgproto.ClientOpts{
-			Session: sessionMaker.SqliteSession(config.Telegram.Session),
-		},
-	)
+	tgc := tgInit(config.Telegram)
 
-	if err != nil {
-		log.Fatalln("failed to start client:", err)
-	}
+	log.Println("Uploading")
+	tgUpload(tgc, []byte("Hello my file"), "journal")
 
-	api := client.API()
+	log.Println("Searching")
+	document := tgSearch(tgc, "journal")
 
-	//log.Println("Trying to upload")
-
-	//upload(client, api, []byte("Hello my file"))
-
-	document := search(client, api, "journal")
-	download(client, api, document) //"journal")
-
-	//var me tg.User = Me()
-
-	//fmt.Printf("%q", me)
-	//client.Idle()
-	//c, err := client.Start(&gotgproto.ClientOpts{})
+	log.Println("Downloading")
+	tgDownload(tgc, document)
 
 }
