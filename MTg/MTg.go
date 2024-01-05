@@ -5,10 +5,6 @@ import (
 	"io"
 	"log"
 
-	//	"os"
-
-	//	"gopkg.in/yaml.v3"
-
 	"github.com/celestix/gotgproto"
 	"github.com/celestix/gotgproto/sessionMaker"
 
@@ -19,8 +15,6 @@ import (
 	"github.com/gotd/td/telegram/uploader"
 	"github.com/gotd/td/tg"
 )
-
-// generate key with dd if=/dev/random of=aes256.key bs=256 count=1
 
 func TgUpload(tgc TelegramClient, payload []byte, name string) { // byte - payload
 
@@ -131,33 +125,3 @@ type ConfigTelegram struct {
 	Session string `yaml:"session"`
 	Phone   string `yaml:"phone"`
 }
-
-/*
-func main() {
-	log.Println("Reading config from config.yml...")
-	yamlFile, err := os.ReadFile("config.yml")
-	if err != nil {
-		panic(err)
-	}
-
-	var config Config
-	err = yaml.Unmarshal(yamlFile, &config)
-	if err != nil {
-		panic(err)
-	}
-
-	log.Println("Connecting")
-	tgc := tgInit(config.Telegram)
-
-	log.Println("Uploading")
-	tgUpload(tgc, []byte("Hello my file"), "journal")
-
-	log.Println("Searching")
-	document := tgSearch(tgc, "journal")
-
-	log.Println("Downloading")
-	downloaded := tgDownload(tgc, document)
-
-	log.Println("Downloaded following string:", string(downloaded))
-}
-*/

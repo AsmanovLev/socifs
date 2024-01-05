@@ -1,4 +1,4 @@
-module socifs
+module github.com/AsmanovLev/socifs
 
 go 1.21.5
 

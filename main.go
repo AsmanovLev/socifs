@@ -4,13 +4,14 @@ import (
 	"log"
 	"os"
 
-	Mtg "/MTg"
-
+	MTg "github.com/AsmanovLev/socifs/MTg"
 	"gopkg.in/yaml.v3"
 )
 
+// generate key with dd if=/dev/random of=aes256.key bs=256 count=1
+
 type Config struct {
-	Telegram Mtg.ConfigTelegram `yaml:"telegram"`
+	Telegram MTg.ConfigTelegram `yaml:"telegram"`
 }
 
 func main() {
@@ -27,16 +28,16 @@ func main() {
 	}
 
 	log.Println("Connecting")
-	tgc := Mtg.tgInit(config.Telegram)
+	tgc := MTg.TgInit(config.Telegram)
 
 	log.Println("Uploading")
-	Mtg.tgUpload(tgc, []byte("Hello my file"), "journal")
+	MTg.TgUpload(tgc, []byte("Hello my file"), "journal")
 
 	log.Println("Searching")
-	document := Mtg.tgSearch(tgc, "journal")
+	document := MTg.TgSearch(tgc, "journal")
 
 	log.Println("Downloading")
-	downloaded := Mtg.tgDownload(tgc, document)
+	downloaded := MTg.TgDownload(tgc, document)
 
 	log.Println("Downloaded following string:", string(downloaded))
 }
