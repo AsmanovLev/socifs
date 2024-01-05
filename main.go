@@ -11,6 +11,8 @@ import (
 	"github.com/celestix/gotgproto/sessionMaker"
 
 	//"github.com/gotd/td/bin"
+
+	"github.com/gotd/td/bin"
 	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/telegram/message/styling"
 	"github.com/gotd/td/telegram/uploader"
@@ -19,7 +21,7 @@ import (
 
 // generate key with dd if=/dev/random of=aes256.key bs=256 count=1
 
-func upload(client *gotgproto.Client, api *tg.Client, payload []byte) { // byte - payload
+func upload(client *gotgproto.Client, api *tg.Client, payload []byte, name string) { // byte - payload
 
 	c := client.CreateContext()
 	u := uploader.NewUploader(api)
@@ -35,13 +37,53 @@ func upload(client *gotgproto.Client, api *tg.Client, payload []byte) { // byte 
 
 	document := message.UploadedDocument(upload, styling.Plain(`Upload: From bot`))
 
-	document.Filename("journal").ForceFile(true)
+	document.Filename(name).ForceFile(true)
 
 	log.Println("Sending file")
 	if _, err := target.Media(c, document); err != nil {
 		fmt.Errorf("send: %w", err)
 		return
 	}
+}
+
+func search(client *gotgproto.Client, api *tg.Client, query string) {
+	c := client.CreateContext()
+	res, err := api.MessagesSearch(c,
+		&tg.MessagesSearchRequest{
+			Q:      query,
+			Peer:   &tg.InputPeerSelf{},
+			Filter: &tg.InputMessagesFilterDocument{},
+			Limit:  1,
+		},
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	buf := new(bin.Buffer)
+	slice := tg.MessagesMessagesSlice{}
+	message := tg.Message{}
+	media := tg.MessageMediaDocument{}
+	document := tg.Document{}
+	attribute := tg.DocumentAttributeFilename{}
+
+	res.Encode(buf)
+	slice.Decode(buf)
+
+	slice.Messages[0].Encode(buf)
+	message.Decode(buf)
+
+	message.Media.Encode(buf)
+	media.Decode(buf)
+
+	media.Document.Encode(buf)
+	document.Decode(buf)
+
+	document.Attributes[0].Encode(buf)
+	attribute.Decode(buf)
+
+	fmt.Println(attribute.FileName)
 }
 
 type ConfigTelegram struct {
@@ -84,9 +126,11 @@ func main() {
 
 	api := client.API()
 
-	log.Println("Trying to upload")
+	//log.Println("Trying to upload")
 
-	upload(client, api, []byte("Hello my file"))
+	//upload(client, api, []byte("Hello my file"))
+
+	search(client, api, "apk")
 
 	//var me tg.User = Me()
 
