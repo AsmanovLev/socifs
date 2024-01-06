@@ -16,12 +16,16 @@ import (
 	"github.com/gotd/td/tg"
 )
 
+const (
+	savechat = &tg.InputPeerSelf{}
+)
+
 func TgUpload(tgc TelegramClient, payload []byte, name string) { // byte - payload
 
 	c := tgc.client.CreateContext()
 	u := uploader.NewUploader(tgc.api)
 	sender := message.NewSender(tgc.api).WithUploader(u)
-	target := sender.To(&tg.InputPeerSelf{})
+	target := sender.To(savechat)
 
 	upload, err := u.FromBytes(c, name, payload)
 
@@ -43,7 +47,7 @@ func TgSearch(tgc TelegramClient, query string) tg.Document {
 	res, err := tgc.api.MessagesSearch(c,
 		&tg.MessagesSearchRequest{
 			Q:      query,
-			Peer:   &tg.InputPeerSelf{},
+			Peer:   savechat,
 			Filter: &tg.InputMessagesFilterDocument{},
 			Limit:  1,
 		},
